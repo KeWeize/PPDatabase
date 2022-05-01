@@ -1,0 +1,20 @@
+plugins {
+    id 'java-library'
+    id 'org.jetbrains.kotlin.jvm'
+    id 'kotlin-kapt'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+dependencies {
+    // compileOnly 只参与编译，不参与打包
+    // 用户配置装载注解处理器
+    compileOnly 'com.google.auto.service:auto-service:1.0.1'
+    kapt 'com.google.auto.service:auto-service:1.0.1'
+    // 引入注解模块
+    compileOnly project(path: ':bundleDatabase-annotations')
+    kapt project(":bundleDatabase-annotations")
+}
