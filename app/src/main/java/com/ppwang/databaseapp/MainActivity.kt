@@ -9,13 +9,14 @@ import android.widget.Toast
 import androidx.room.Room
 import com.ppwang.bundle.database.core.PPDatabase
 import com.ppwang.databaseapp.entity.VipEntity
-import com.ppwang.databaseapp.test.PPRoomDatabase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
+
+    private var tag = "MainActivity"
 
     private lateinit var mOperateIdEt: EditText
     private lateinit var mNameEt: EditText
@@ -69,19 +70,9 @@ class MainActivity : AppCompatActivity() {
         }
         val scope = CoroutineScope(Job() + Dispatchers.IO)
         scope.launch {
-
-            // todo test
-            val db = Room.databaseBuilder(
-                this@MainActivity, PPRoomDatabase::class.java,
-                "testdabase2"
-            ).build()
-            db.vipEntityDao.insert(obj)
-            db.close()
-
-
-            val service = PPDatabase.getInstance().getService(VipEntity::class.java)
-            service?.insert(obj)
-            var a = service?.insert(obj, obj)
+//            val service = PPVipServiceImpl()
+//            val insertId = service.insert(obj)
+//            Log.d(tag, "insert id is : $insertId")
         }
     }
 
@@ -102,17 +93,15 @@ class MainActivity : AppCompatActivity() {
      */
     private fun onFindAll() {
         val scope = CoroutineScope(Job() + Dispatchers.IO)
-        // todo test
         scope.launch {
-            val db = Room.databaseBuilder(
-                this@MainActivity, PPRoomDatabase::class.java,
-                "testdabase2"
-            ).build()
-            val list = db.vipEntityDao.findAll()
-            list?.forEach {
-                Log.d("MainActivity", "name: ${it.name}, sex: ${it.sex}, age: ${it.age}")
-            }
-            db.close()
+//            val service = PPVipServiceImpl()
+//            val list = service.selectBy("SELECT * FROM %tableName%")
+//            list?.forEach {
+//                Log.d(
+//                    "MainActivity",
+//                    "id: ${it.uId}, name: ${it.name}, sex: ${it.sex}, age: ${it.age}"
+//                )
+//            }
         }
     }
 

@@ -10,6 +10,8 @@ java {
 }
 
 dependencies {
+    implementation "com.squareup:javapoet:1.13.0"
+    implementation project(":bundleDatabase-runtime")
     // compileOnly 只参与编译，不参与打包
     // 用户配置装载注解处理器
     compileOnly 'com.google.auto.service:auto-service:1.0.1'

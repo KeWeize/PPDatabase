@@ -15,6 +15,7 @@
             <option value="$PROJECT_DIR$/bundleDatabase" />
             <option value="$PROJECT_DIR$/bundleDatabase-annotations" />
             <option value="$PROJECT_DIR$/bundleDatabase-compiler" />
+            <option value="$PROJECT_DIR$/bundleDatabase-runtime" />
           </set>
         </option>
         <option name="resolveModulePerSourceSet" value="false" />

@@ -26,8 +26,7 @@ class PPDatabase private constructor() {
     }
 
     fun <T> getService(clazz: Class<T>): PPDefaultService<T>? {
-        return object : PPDefaultService<T>() {
-        }
+        return null
     }
 
 }
