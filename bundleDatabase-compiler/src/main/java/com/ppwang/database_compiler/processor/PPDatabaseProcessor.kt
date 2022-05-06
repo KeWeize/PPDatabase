@@ -135,10 +135,16 @@ class PPDatabaseProcessor : AbstractProcessor() {
             // 添加 @DAO 注解
             val daoAnno = AnnotationSpec.builder(Dao::class.java)
                 .build()
+
+            val spClazz = ParameterizedTypeName.get(
+                ClassName.bestGuess("com.ppwang.bundle.database.dao.PPInternalDao"),
+                ClassName.bestGuess(tableInfo.getQualifiedName())
+            )
+
             val typeSpecBuild = TypeSpec.classBuilder(tableInfo.daoClassName)
                 .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
                 .addAnnotation(daoAnno)
-                .superclass(ClassName.bestGuess("com.ppwang.bundle.database.dao.PPInternalDao"))
+                .superclass(spClazz)
             // 生成动态java文件
             val packageName = String.format(
                 "%s.%s",
@@ -181,17 +187,18 @@ class PPDatabaseProcessor : AbstractProcessor() {
             .superclass(ClassName.bestGuess("androidx.room.RoomDatabase"))
 
         // 遍历添加各个@Dao内部实现类的抽象方法体
-//        mTableInfoList.forEach { tableInfo ->
+        mTableInfoList.forEach { tableInfo ->
             val daoImplPackageName = String.format(
                 "%s.%s",
                 PPTableInfo.AUTO_GENERATE_PACKAGE_NAME, PPTableInfo.DATABASE_DAO_IMPL_PATH
             )
-            val methodSpec = MethodSpec.methodBuilder("getPPVipEntityDefaultDaoImpl")
+            val daoClassName = tableInfo.daoClassName
+            val methodSpec = MethodSpec.methodBuilder("get${daoClassName}")
                 .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
-                .returns(ClassName.bestGuess("com.ppwang.bundle.database.dao.impl.PPVipEntityDefaultDaoImpl"))
+                .returns(ClassName.bestGuess("com.ppwang.bundle.database.dao.impl.${daoClassName}"))
                 .build()
-//            typeSpecBuild.addMethod(methodSpec)
-//        }
+            typeSpecBuild.addMethod(methodSpec)
+        }
 
         val javaFile =
             JavaFile.builder(PPTableInfo.AUTO_GENERATE_PACKAGE_NAME, typeSpecBuild.build())
