@@ -5,6 +5,7 @@ import androidx.room.Database
 import androidx.room.Entity
 import com.google.auto.service.AutoService
 import com.ppwang.bundledatabase_runtime.PPTableInfo
+import com.ppwang.bundledatabase_runtime.constant.PPClazzConstant
 import com.squareup.javapoet.*
 import java.io.IOException
 import java.lang.StringBuilder
@@ -107,10 +108,10 @@ class PPDatabaseProcessor : AbstractProcessor() {
                     val simpleName = entityElement.simpleName.toString()
                     val tableInfo = PPTableInfo(qualifiedName, simpleName)
                     mTableInfoList.add(tableInfo)
-                    mMessager?.printMessage(
-                        Diagnostic.Kind.NOTE, "simpleName : $simpleName, " +
-                                "daoName: ${tableInfo.daoClassName}, serviceName: ${tableInfo.serviceClassName}"
-                    )
+//                    mMessager?.printMessage(
+//                        Diagnostic.Kind.NOTE, "simpleName : $simpleName, " +
+//                                "daoName: ${tableInfo.daoClassName}, serviceName: ${tableInfo.serviceClassName}"
+//                    )
                 }
             } catch (e: Exception) {
                 mMessager?.printMessage(Diagnostic.Kind.ERROR, e.message)
@@ -130,30 +131,63 @@ class PPDatabaseProcessor : AbstractProcessor() {
         }
     }
 
+    /**
+     * 生成每个 @Entity类对应的 @Dao实现类
+     */
     private fun generateInternalDaoFile(tableInfo: PPTableInfo?) {
         tableInfo?.run {
-            // 添加 @DAO 注解
+            // 生成对应的 DaoImp 实现类
             val daoAnno = AnnotationSpec.builder(Dao::class.java)
                 .build()
-
-            val spClazz = ParameterizedTypeName.get(
-                ClassName.bestGuess("com.ppwang.bundle.database.dao.PPInternalDao"),
+            // 声明继承于父类 PPInternalDao<T>
+            val daoSpClazz = ParameterizedTypeName.get(
+                ClassName.bestGuess(PPClazzConstant.DAO_INTERNAL_SUPER_CLAZZ_QUALIFIED_NAME),
                 ClassName.bestGuess(tableInfo.getQualifiedName())
             )
-
-            val typeSpecBuild = TypeSpec.classBuilder(tableInfo.daoClassName)
+            val daoTypeSpecBuild = TypeSpec.classBuilder(tableInfo.daoClazzSimpleName)
                 .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
                 .addAnnotation(daoAnno)
-                .superclass(spClazz)
-            // 生成动态java文件
-            val packageName = String.format(
-                "%s.%s",
-                PPTableInfo.AUTO_GENERATE_PACKAGE_NAME, PPTableInfo.DATABASE_DAO_IMPL_PATH
-            )
-            val javaFile =
-                JavaFile.builder(packageName, typeSpecBuild.build())
+                .superclass(daoSpClazz)
+            // 执行 Java 文件生成
             try {
-                javaFile.build().writeTo(mFiler)
+                JavaFile.builder(
+                    PPClazzConstant.AUTO_GENERATE_DAO_IMPL_PACKAGE_NAME,
+                    daoTypeSpecBuild.build()
+                ).build().writeTo(mFiler)
+            } catch (e: IOException) {
+            }
+
+            // 生成对应的 ServiceImp 实现类
+            val sercieSpClazz = ParameterizedTypeName.get(
+                ClassName.bestGuess(PPClazzConstant.SERVICE_DEFAULT_SUPER_CLAZZ_QUALIFIED_NAME),
+                ClassName.bestGuess(tableInfo.getQualifiedName())
+            )
+            val databaseQualifiedName = PPClazzConstant.DAOBASE_CLAZZ_QUALIFIEDNAME
+            val methodCodeSb = StringBuilder()
+            methodCodeSb.append("$databaseQualifiedName db = androidx.room.Room.databaseBuilder(\n")
+                .append("        com.ppwang.bundle.database.core.PPDatabase.getInstance().getContext(),\n")
+                .append("        $databaseQualifiedName.class,\n")
+                .append("        \"$mDatabaseName\"\n")
+                .append("        ).build();\n")
+                .append("        return db.${tableInfo.daoMethodName}();")
+            val sercieMethodSpec =
+                MethodSpec.methodBuilder("attachIntenalDaoImpl")
+                    .addAnnotation(ClassName.bestGuess("java.lang.Override"))
+                    .addAnnotation(ClassName.bestGuess("androidx.annotation.Nullable"))
+                    .addModifiers(Modifier.PUBLIC)
+                    .returns(daoSpClazz)
+                    .addCode(methodCodeSb.toString())
+                    .build()
+            val serviceTypeSpecBuild = TypeSpec.classBuilder(tableInfo.serviceClazzSimpleName)
+                .addModifiers(Modifier.PUBLIC)
+                .superclass(sercieSpClazz)
+                .addMethod(sercieMethodSpec)
+            // 执行 Java 文件生成
+            try {
+                JavaFile.builder(
+                    PPClazzConstant.AUTO_GENERATE_SERVICE_IMPL_PACKAGE_NAME,
+                    serviceTypeSpecBuild.build()
+                ).build().writeTo(mFiler)
             } catch (e: IOException) {
             }
         }
@@ -167,41 +201,40 @@ class PPDatabaseProcessor : AbstractProcessor() {
             return
         }
         val entityListSb = StringBuilder()
-        mTableInfoList.forEach { tableInfo ->
-            tableInfo.getQualifiedName()?.let { qualifiedName ->
-                entityListSb.append("${qualifiedName}.class, ")
+        val size = mTableInfoList.size
+        for (i in 0 until size) {
+            val tableInfo = mTableInfoList[i]
+            entityListSb
+                .append("${tableInfo.getQualifiedName()}.class")
+            if (i < size - 1) {
+                entityListSb.append(",\n")
             }
         }
-        if (entityListSb.length < 2) {
+        if (entityListSb.isEmpty()) {
             return
         }
-        val entityListString = entityListSb.subSequence(0, entityListSb.length - 2).toString()
+        // 添加@Database注解
+        val entityListString = entityListSb.toString()
         val databaseAnno = AnnotationSpec.builder(Database::class.java)
             .addMember("entities", "{$entityListString}")
             .addMember("exportSchema", "false")
             .addMember("version", mDatabaseVersion)
             .build()
-        val typeSpecBuild = TypeSpec.classBuilder("PPRoomDatabase")
+        val typeSpecBuild = TypeSpec.classBuilder(PPClazzConstant.DAOBASE_CLAZZ_SIMPLENAME)
             .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
             .addAnnotation(databaseAnno)
             .superclass(ClassName.bestGuess("androidx.room.RoomDatabase"))
-
         // 遍历添加各个@Dao内部实现类的抽象方法体
         mTableInfoList.forEach { tableInfo ->
-            val daoImplPackageName = String.format(
-                "%s.%s",
-                PPTableInfo.AUTO_GENERATE_PACKAGE_NAME, PPTableInfo.DATABASE_DAO_IMPL_PATH
-            )
-            val daoClassName = tableInfo.daoClassName
-            val methodSpec = MethodSpec.methodBuilder("get${daoClassName}")
+            val methodSpec = MethodSpec.methodBuilder(tableInfo.daoMethodName)
                 .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
-                .returns(ClassName.bestGuess("com.ppwang.bundle.database.dao.impl.${daoClassName}"))
+                .returns(ClassName.bestGuess(tableInfo.daoClazzQualifiedName))
                 .build()
             typeSpecBuild.addMethod(methodSpec)
         }
 
         val javaFile =
-            JavaFile.builder(PPTableInfo.AUTO_GENERATE_PACKAGE_NAME, typeSpecBuild.build())
+            JavaFile.builder(PPClazzConstant.AUTO_GENERATE_PACKAGE_NAME, typeSpecBuild.build())
         try {
             javaFile.build().writeTo(mFiler)
         } catch (e: IOException) {

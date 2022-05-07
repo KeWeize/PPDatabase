@@ -6,7 +6,6 @@ import android.util.Log
 import android.view.View
 import android.widget.EditText
 import android.widget.Toast
-import androidx.room.Room
 import com.ppwang.bundle.database.core.PPDatabase
 import com.ppwang.databaseapp.entity.VipEntity
 import kotlinx.coroutines.CoroutineScope
@@ -26,6 +25,8 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        PPDatabase.getInstance().init(this)
 
         mOperateIdEt = findViewById(R.id.et_operate_id)
         mNameEt = findViewById(R.id.et_name)
@@ -47,6 +48,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(R.id.btn_modify).setOnClickListener {
             // 修改
             Toast.makeText(this, "修改成功", Toast.LENGTH_SHORT).show()
+            onUpdate()
         }
 
         findViewById<View>(R.id.btn_check).setOnClickListener {
@@ -70,9 +72,9 @@ class MainActivity : AppCompatActivity() {
         }
         val scope = CoroutineScope(Job() + Dispatchers.IO)
         scope.launch {
-//            val service = PPVipServiceImpl()
-//            val insertId = service.insert(obj)
-//            Log.d(tag, "insert id is : $insertId")
+            val service = PPDatabase.getInstance().getService(VipEntity::class.java)
+            val insertId = service?.insert(obj)
+            Log.d(tag, "insert id is : $insertId")
         }
     }
 
@@ -89,19 +91,43 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
+     * 修改数据
+     */
+    private fun onUpdate() {
+        val id = mOperateIdEt.text.toString()
+        val name = mNameEt.text.toString()
+        val sex = mSexEt.text.toString()
+        val age = mAgeEt.text.toString().toIntOrNull() ?: 0
+        val obj = VipEntity().apply {
+            this.uId = id.toIntOrNull() ?: 0
+            this.name = name
+            this.sex = sex
+            this.age = age
+        }
+        val scope = CoroutineScope(Job() + Dispatchers.IO)
+        scope.launch {
+            val service = PPDatabase.getInstance().getService(VipEntity::class.java)
+            service?.update(obj)
+        }
+    }
+
+    /**
      * 查找所有数据
      */
     private fun onFindAll() {
         val scope = CoroutineScope(Job() + Dispatchers.IO)
         scope.launch {
-//            val service = PPVipServiceImpl()
-//            val list = service.selectBy("SELECT * FROM %tableName%")
-//            list?.forEach {
-//                Log.d(
-//                    "MainActivity",
-//                    "id: ${it.uId}, name: ${it.name}, sex: ${it.sex}, age: ${it.age}"
-//                )
-//            }
+
+            scope.launch {
+                val service = PPDatabase.getInstance().getService(VipEntity::class.java)
+                val list = service?.selectBy("SELECT * FROM %tableName%")
+                list?.forEach {
+                    Log.d(
+                        "MainActivity",
+                        "id: ${it.uId}, name: ${it.name}, sex: ${it.sex}, age: ${it.age}"
+                    )
+                }
+            }
         }
     }
 

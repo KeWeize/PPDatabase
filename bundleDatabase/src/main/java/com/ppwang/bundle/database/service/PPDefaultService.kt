@@ -20,7 +20,7 @@ abstract class PPDefaultService<T> {
             return field
         }
 
-    internal abstract fun attachIntenalDaoImpl(): PPInternalDao<T>
+    abstract fun attachIntenalDaoImpl(): PPInternalDao<T>?
 
     /**
      * 插入单个对象到数据库，如果插入目标对象主键id已存在则会覆盖旧项
