@@ -2,8 +2,8 @@
 <project version="4">
   <component name="CompilerConfiguration">
     <bytecodeTargetLevel target="1.7">
-      <module name="PPDatabaseApp.app" target="11" />
-      <module name="PPDatabaseApp.bundleDatabase" target="11" />
+      <module name="PPDatabaseApp.app" target="1.8" />
+      <module name="PPDatabaseApp.bundleDatabase" target="1.8" />
       <module name="PPDatabaseApp.bundleDatabase-annotations" target="1.8" />
       <module name="PPDatabaseApp.bundleDatabase-compiler" target="1.8" />
     </bytecodeTargetLevel>
